@@ -15,8 +15,9 @@ type Category struct {
 }
 
 func main() {
-	if len(os.Args) != 5 {
-		fmt.Println("Usage: go run main.go categories.csv transactions.csv output.csv column_index")
+	if len(os.Args) != 6 {
+		fmt.Printf("Wrong number of arguments: %v\n", len(os.Args))
+		fmt.Println("Usage: go run main.go categories.csv transactions.csv output.csv column_index separator")
 		return
 	}
 
@@ -25,6 +26,8 @@ func main() {
 		fmt.Println("Error converting column index:", err)
 		return
 	}
+
+	separator := os.Args[5]
 
 	categoriesFile, err := os.Open(os.Args[1])
 	if err != nil {
@@ -60,7 +63,7 @@ func main() {
 	defer transactionsFile.Close()
 
 	transactionsReader := csv.NewReader(transactionsFile)
-	transactionsReader.Comma = ';'
+	transactionsReader.Comma = rune(separator[0])
 	transactionsRecords, err := transactionsReader.ReadAll()
 	if err != nil {
 		fmt.Println("Error reading transactions file:", err)
