@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 )
 
 // Category represents a category for bank transactions
@@ -15,7 +16,13 @@ type Category struct {
 
 func main() {
 	if len(os.Args) != 5 {
-		fmt.Println("Usage: go run main.go categories.csv transactions.csv output.csv")
+		fmt.Println("Usage: go run main.go categories.csv transactions.csv output.csv column_index")
+		return
+	}
+
+	columnIndex, err := strconv.Atoi(os.Args[4])
+	if err != nil {
+		fmt.Println("Error converting column index:", err)
 		return
 	}
 
@@ -53,17 +60,26 @@ func main() {
 	defer transactionsFile.Close()
 
 	transactionsReader := csv.NewReader(transactionsFile)
+	transactionsReader.Comma = ';'
 	transactionsRecords, err := transactionsReader.ReadAll()
 	if err != nil {
 		fmt.Println("Error reading transactions file:", err)
 		return
 	}
 
+	// Extract and store the header
+	header := transactionsRecords[0]
+	transactionsRecords = transactionsRecords[1:]
+
 	var updatedTransactions [][]string
 	for _, record := range transactionsRecords {
+		if columnIndex < 0 || columnIndex >= len(record) {
+			fmt.Println("Invalid column index")
+			return
+		}
 		var matchedCategory string
 		for _, category := range categories {
-			if category.Regex.MatchString(record[1]) {
+			if category.Regex.MatchString(record[columnIndex]) {
 				matchedCategory = category.Name
 				break
 			}
@@ -72,6 +88,7 @@ func main() {
 		updatedTransactions = append(updatedTransactions, record)
 	}
 
+	// Write the output with header
 	outputFile, err := os.Create(os.Args[3])
 	if err != nil {
 		fmt.Println("Error creating output file:", err)
@@ -82,6 +99,13 @@ func main() {
 	outputWriter := csv.NewWriter(outputFile)
 	defer outputWriter.Flush()
 
+	// Write the header
+	if err := outputWriter.Write(append(header, "Category")); err != nil {
+		fmt.Println("Error writing header:", err)
+		return
+	}
+
+	// Write the transaction data
 	for _, record := range updatedTransactions {
 		if err := outputWriter.Write(record); err != nil {
 			fmt.Println("Error writing transaction data:", err)
