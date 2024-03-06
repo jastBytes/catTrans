@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 // Category represents a category for bank transactions
@@ -21,10 +22,15 @@ func main() {
 		return
 	}
 
-	columnIndex, err := strconv.Atoi(os.Args[4])
-	if err != nil {
-		fmt.Println("Error converting column index:", err)
-		return
+	columnIndicesSplit := strings.Split(os.Args[4], ",")
+	var columnIndices []int
+	for _, i := range columnIndicesSplit {
+		columnIndex, err := strconv.Atoi(i)
+		if err != nil {
+			fmt.Println("Error converting column index:", err)
+			return
+		}
+		columnIndices = append(columnIndices, columnIndex)
 	}
 
 	separator := os.Args[5]
@@ -76,15 +82,17 @@ func main() {
 
 	var updatedTransactions [][]string
 	for _, record := range transactionsRecords {
-		if columnIndex < 0 || columnIndex >= len(record) {
-			fmt.Println("Invalid column index")
-			return
-		}
 		var matchedCategory string
-		for _, category := range categories {
-			if category.Regex.MatchString(record[columnIndex]) {
-				matchedCategory = category.Name
-				break
+		for _, columnIndex := range columnIndices {
+			if columnIndex < 0 || columnIndex >= len(record) {
+				fmt.Println("Invalid column index")
+				return
+			}
+			for _, category := range categories {
+				if category.Regex.MatchString(record[columnIndex]) {
+					matchedCategory = category.Name
+					break
+				}
 			}
 		}
 		record = append(record, matchedCategory)
